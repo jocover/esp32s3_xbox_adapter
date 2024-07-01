@@ -36,14 +36,14 @@ static const char *TAG = "xbox";
 #define XBOX_CONTROLLER_INDEX_BUTTONS_CENTER 14
 #define XBOX_CONTROLLER_INDEX_BUTTONS_SHARE 15
 
+
+
 //static const uint16_t maxJoy = 0xffff;
 
 //int64_t timer = 0;
 
-//uint8_t last_buf[16];
+
 hid_ps4_report_t ps4_report = {};
-static uint8_t last_timestamp = 0;
-static uint8_t report_counter = 0;
 
 
 void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
@@ -148,7 +148,7 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
         if (btnBits & 0b00001000) // Start
             ps4_report.buttons2 |= (1 << 5);
 
-        ps4_report.buttons3 = (report_counter << 2);
+        
 
         if (btnBits & 0b00010000) // Xbox
             ps4_report.buttons3 |= (1 << 0);
@@ -252,7 +252,7 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
         ps4_report.rx = joyRHori / 256;
         ps4_report.ry = joyRVert / 256;
 
-        ps4_report.timestamp = last_timestamp;
+       //ps4_report.timestamp = last_timestamp;
 
         // printf("A:%01x B:%01x X:%01x Y:%01x LB:%01x RB:%01x Select:%01x Start:%01x Xbox:%01x LS:%01x RS:%01x Share:%01x\n", btnA, btnB, btnX, btnY, btnLB, btnRB, btnSelect, btnStart, btnXbox, btnLS, btnRS, btnShare);
 
@@ -283,13 +283,7 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
         ps4_report.unknown3[14] = 0x80;
         ps4_report.unknown3[19] = 0x80;
 
-        report_counter++;
-        if (report_counter > (UINT8_MAX >> 2))
-        {
-            report_counter = 0;
-        }
-        last_timestamp += 188;
-
+       
         send_hid_ps4_report(&ps4_report);
 
         break;
@@ -360,7 +354,7 @@ void hid_task(void *pvParameters)
 void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer,
                            uint16_t bufsize)
 {
-    ESP_LOGI("PS4_DRV", "tud_hid_set_report_cb");
+    //ESP_LOGI("PS4_DRV", "tud_hid_set_report_cb");
 
     hid_ps4_set_report_cb(itf, report_id, report_type, buffer, bufsize);
 }
@@ -368,7 +362,7 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
 uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer,
                                uint16_t reqlen)
 {
-    ESP_LOGI("PS4_DRV", "tud_hid_get_report_cb");
+    //ESP_LOGI("PS4_DRV", "tud_hid_get_report_cb");
 
     return hid_ps4_get_report_cb(itf, report_id, report_type, buffer, reqlen);
 }

@@ -10,6 +10,7 @@
 #include "mbedtls/sha256.h"
 #include "mbedtls/pk.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
@@ -265,7 +266,7 @@ static const uint8_t ps4_output_0xf3[] = {0x0, 0x38, 0x38, 0, 0, 0, 0};
 static uint8_t cur_nonce_id = 1;
 static uint8_t send_nonce_part = 0;
 
-static hid_ps4_report_t last_report = {};
+
 
 static PS4State ps4_auth_state;
 static bool ps4_auth_authsent;
@@ -281,6 +282,12 @@ extern const unsigned char ps4_signature_end[] asm("_binary_sig_bin_end");
 
 
 mbedtls_pk_context pk;
+static hid_ps4_report_t last_report = {};
+static uint32_t last_report_timer = 0;
+static uint8_t report_counter = 0;
+static uint32_t axis_timing=0;
+
+#define PS4_KEEPALIVE_TIMER 5
 
 // uint8_t ps4_out_buffer[64] = {};
 
@@ -296,12 +303,35 @@ typedef enum
 bool send_hid_ps4_report(hid_ps4_report_t* report)
 {
     bool result = false;
-    if (tud_hid_ready())
-    {
-        result = tud_hid_report(0, report, sizeof(hid_ps4_report_t));
-    }
 
-    memcpy(&last_report, report,sizeof(hid_ps4_report_t));
+    // Wake up TinyUSB device
+    if (tud_suspended())
+        tud_remote_wakeup();
+
+    uint32_t now = esp_timer_get_time()/1000;
+    uint16_t report_size = sizeof(hid_ps4_report_t);
+
+    report->buttons3 |= (report_counter << 2);
+    report->timestamp = axis_timing;
+
+    if (memcmp(&last_report, report, report_size) != 0)
+    {
+
+        // HID ready + report sent, copy previous report
+        if (tud_hid_ready() && tud_hid_report(0, report, report_size) == true ) {
+            memcpy(&last_report, report, report_size);
+        }
+        // keep track of our last successful report, for keepalive purposes
+        last_report_timer = now;
+        result=true;
+    } else {
+
+        if ((now - last_report_timer) > PS4_KEEPALIVE_TIMER) {
+            report_counter = (report_counter+1) & 0x3F;
+            axis_timing = now;		 		// axis counter is 16 bits
+        }
+
+    }
 
     return result;
 }
