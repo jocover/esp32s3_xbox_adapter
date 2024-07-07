@@ -385,7 +385,7 @@ uint16_t hid_ps4_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
             data[1] = cur_nonce_id;
             data[2] = ps4_auth_state == signed_nonce_ready ? 0 : 16;
             memset(&data[3], 0, 9);
-            crc32 = esp_rom_crc32_le(crc32, data, 60);
+            crc32 = esp_rom_crc32_le(crc32, data, 12);
             memcpy(&data[12], &crc32, sizeof(uint32_t));
             memcpy(buffer, &data[1], 15); // move data over to buffer
             return 15;
